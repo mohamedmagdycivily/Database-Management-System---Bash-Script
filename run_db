@@ -1,0 +1,280 @@
+#!/bin/bash
+
+DBdir=databases
+declare -a DBarr
+
+function line
+{
+	echo "___________________________________________________________________"
+}
+
+function menue1
+{
+	echo "1) Create Database        3) Connect to Database  5) Quite "
+	 echo "2) List Database  4) Drop Databse"
+}
+
+function menue2
+{
+	echo "1) Create Table	      4) Insert into table  7) Back "
+	echo "2) List Table	      5) Select from table"
+	echo "3) Drop Table	      6) Delete From table"
+}
+
+function checkTb
+{
+        echo "table name : "
+        read tb
+        while [ ! -f $DBdir/$db/$tb ]
+        do
+          	echo "wrong entery";
+                echo "table name : "
+                read tb
+        done
+}
+
+########################################################################
+
+function CreateTb
+{
+	echo "table name : "
+	read tb
+	while [ -f $DBdir/$db/$tb ]
+	do 
+		echo "the table already exist";
+	        echo "table name : "
+	        read tb
+	done
+	
+	touch $DBdir/$db/$tb 
+	file=$DBdir/$db/$tb
+	
+	line >> $file
+	echo "TABLE CONTENT" >> $file
+	line >> $file 
+	
+	echo "table name : $tb" >> $file
+	
+	echo "enter columns number" #should check if enterd num or not
+        read colNum
+        echo "columns number : $colNum" >> $file
+
+	line >> $file
+	echo "COLUMNS" >> $file
+	line >> $file
+	
+ 	typeset -i i
+	typeset -i n
+	i=$colNum
+	n=1
+
+	while [ $i -gt 0 ]
+	do 
+		echo "col $n name : "  
+		read colName            #should Check
+		echo "col $n type"
+		read colType 		#should Check 
+		echo "$colName : $colType" >> $file
+		let i-=1;
+		let n+=1;
+	done
+	echo "PK : 1" >> $file
+
+	line >> $file
+	echo "DATA" >> $file
+	line >> $file
+}
+
+function DropTb
+{
+	echo "table name : "
+        read tb
+        while [ ! -f $DBdir/$db/$tb ]
+        do
+          	echo "wrong entery";
+                echo "table name : "
+                read tb
+        done
+	
+	rm $DBdir/$db/$tb;
+	echo "$tb has been deleted";
+}
+
+function ListTb
+{
+        for t in `ls $DBdir/$db`
+        do
+                echo "$t"
+        done
+}
+
+function InsertIntoTb
+{
+        checkTb
+
+	typeset -i cellNum 
+	typeset -i n
+	cellNum=`awk -F: '{if(NR == 5) print $2}' $DBdir/$db/$tb`   #get colnums 
+        n=1
+
+	while [ $cellNum -gt 0 ]
+        do
+          	echo "enter the $n cell data : "
+                read cellData            #should Check
+                echo -n "$cellData : " >> $DBdir/$db/$tb
+                let cellNum-=1;
+                let n+=1;
+        done
+	echo "" >> $DBdir/$db/$tb
+
+}
+
+function SelectFromTb
+{
+	checkTb 
+	
+	#typeset -i pk	
+	echo "enter primary key : "
+	read pk
+	
+	record=`awk -v var=$pk -F: '{if($1 == var) print $0}' $DBdir/$db/$tb`
+	echo $record 
+}
+
+function DeleteFromTb
+{
+	 checkTb
+
+        echo "enter primary key : "
+        read pk
+
+	recordNum=`awk -v var=$pk -F: '{if($1 == var) print NR}' $DBdir/$db/$tb`
+
+        sed -i ''"$recordNum"'d' $DBdir/$db/$tb
+        echo "done"
+}
+####################################################################################
+
+function Create	
+{
+	echo "enter the Database you want to create"
+	read name;
+	if [ -d $DBdir/$name ]
+		then echo "this Database already created"
+	else
+		mkdir $DBdir/$name
+		if [ $? -eq 0 ]
+			then echo "done"
+		else
+			echo "Error"
+		fi
+	fi
+}
+
+function List
+{
+	for d in `ls $DBdir`
+	do
+		echo "$d"
+	done
+}
+
+function Drop
+{
+	echo "enter the Database you want to drop"
+	read db
+	for d in `ls $DBdir`
+        do 
+		#echo "$db $d"
+          	if [ $d = $db ]
+			then
+			rm -r $DBdir/$d
+		fi
+        done
+}
+
+function Connect
+{
+	echo "enter the Database you want to connect with"
+	read db
+	line
+	while [ ! -d  $DBdir/$db ]
+	do
+		 echo "wrong entery"	
+       		 echo "enter the Database you want to connect with"
+       		 read db
+       		 line
+	done
+
+	select choice in "Create Table" "List Tables" "Drop Table" "Insert into table" "Select from table" "Delete From table" "Back"
+	do
+	case $choice in
+	"Create Table") CreateTb $db
+			line
+			menue2 	
+                	 ;;	
+	"List Tables") ListTb $db
+			line
+			menue2
+                	;;
+	"Drop Table") DropTb
+			line
+			menue2
+                	;;
+	"Insert into table") InsertIntoTb
+			line
+			menue2
+			;;
+        "Select from table") SelectFromTb
+			line
+			menue2
+                        ;;
+        "Delete From table") DeleteFromTb
+			line
+			menue2
+                        ;;
+	"Back")
+			break
+			;;
+	*) echo "wrong choice"
+			line
+			menue2
+	                 ;;
+	esac
+	done	
+}
+
+
+
+
+
+select choice in "Create Database" "List Database" "Connect to Database" "Drop Databse" "Quite"
+do 
+case $choice in
+"Create Database")
+		Create;
+		line
+		menue1
+		 ;;
+"List Database")
+		List;
+		line;
+		menue1
+		 ;;
+"Connect to Database")
+		Connect 
+		line
+		menue1 
+		;;
+"Drop Databse")
+		Drop
+		line
+		menue1
+		;;
+"Quite")
+		break
+		;;
+*) echo "wrong choice"
+		 ;;
+esac
+done
